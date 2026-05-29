@@ -58,7 +58,27 @@ const commands = [
       option.setName('reason')
         .setDescription('Lý do sử dụng')
         .setRequired(true)
+    ),
+
+  // SỬA DONATE
+  new SlashCommandBuilder()
+    .setName('suadonate')
+    .setDescription('Sửa số tiền donate của người chơi')
+    .addStringOption(option =>
+      option.setName('nguoigui')
+        .setDescription('Tên người donate')
+        .setRequired(true)
     )
+    .addIntegerOption(option =>
+      option.setName('money')
+        .setDescription('Số tiền mới')
+        .setRequired(true)
+    ),
+
+  // RESET QUỸ
+  new SlashCommandBuilder()
+    .setName('resetquy')
+    .setDescription('Reset toàn bộ quỹ và donate'),
 
 ].map(command => command.toJSON());
 
@@ -112,8 +132,7 @@ client.on('interactionCreate', async interaction => {
         `👤 Người gửi: **${senderName}**\n` +
         `💵 Số tiền: ${money.toLocaleString()}đ\n\n` +
         `🏦 Tổng quỹ hiện tại: ${totalMoney.toLocaleString()}đ\n\n` +
-        `Cảm ơn bạn đã đóng góp!\n` +
-        `Chúc bạn ngày tốt lành ❤️`
+        `❤️ Cảm ơn bạn đã đóng góp!`
       );
 
     await interaction.reply({
@@ -165,11 +184,16 @@ client.on('interactionCreate', async interaction => {
     const money = interaction.options.getInteger('money');
     const reason = interaction.options.getString('reason');
 
-    totalMoney -= money;
+    if (money > totalMoney) {
 
-    if (totalMoney < 0) {
-      totalMoney = 0;
+      return interaction.reply({
+        content: '❌ Quỹ không đủ tiền!',
+        ephemeral: true
+      });
+
     }
+
+    totalMoney -= money;
 
     const embed = new EmbedBuilder()
       .setTitle('💸 Đã Trừ Tiền Khỏi Quỹ')
@@ -178,6 +202,50 @@ client.on('interactionCreate', async interaction => {
         `💵 Số tiền: ${money.toLocaleString()}đ\n` +
         `📝 Lý do: ${reason}\n\n` +
         `🏦 Quỹ còn lại: ${totalMoney.toLocaleString()}đ`
+      );
+
+    await interaction.reply({
+      embeds: [embed]
+    });
+  }
+
+  // SỬA DONATE
+  if (interaction.commandName === 'suadonate') {
+
+    const senderName = interaction.options.getString('nguoigui');
+    const newMoney = interaction.options.getInteger('money');
+
+    const oldMoney = donors[senderName] || 0;
+
+    totalMoney = totalMoney - oldMoney + newMoney;
+
+    donors[senderName] = newMoney;
+
+    const embed = new EmbedBuilder()
+      .setTitle('✏️ Đã Sửa Donate')
+      .setDescription(
+        `👤 Người donate: **${senderName}**\n` +
+        `💵 Tiền cũ: ${oldMoney.toLocaleString()}đ\n` +
+        `💰 Tiền mới: ${newMoney.toLocaleString()}đ\n\n` +
+        `🏦 Tổng quỹ hiện tại: ${totalMoney.toLocaleString()}đ`
+      );
+
+    await interaction.reply({
+      embeds: [embed]
+    });
+  }
+
+  // RESET QUỸ
+  if (interaction.commandName === 'resetquy') {
+
+    totalMoney = 0;
+    donors = {};
+
+    const embed = new EmbedBuilder()
+      .setTitle('🗑️ Reset Quỹ Thành Công')
+      .setDescription(
+        `💸 Tổng quỹ đã về 0đ\n` +
+        `📉 Bảng xếp hạng donate đã được xóa`
       );
 
     await interaction.reply({
