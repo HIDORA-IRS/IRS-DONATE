@@ -112,7 +112,7 @@ client.on('interactionCreate', async interaction => {
         `👤 Người gửi: **${senderName}**\n` +
         `💵 Số tiền: ${money.toLocaleString()}đ\n\n` +
         `🏦 Tổng quỹ hiện tại: ${totalMoney.toLocaleString()}đ\n\n` +
-        `❤️ Cảm ơn bạn đã đóng góp!\n` +
+        `Cảm ơn bạn đã đóng góp!\n` +
         `Chúc bạn ngày tốt lành ❤️`
       );
 
