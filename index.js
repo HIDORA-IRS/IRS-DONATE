@@ -15,8 +15,21 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
 
+// ======================
+// DATA
+// ======================
+
 let totalMoney = 0;
-let donors = {};
+
+// lưu từng lần donate
+let donations = [];
+
+// id donate tự tăng
+let donationId = 1;
+
+// ======================
+// COMMANDS
+// ======================
 
 const commands = [
 
@@ -45,6 +58,36 @@ const commands = [
     .setName('topdonate')
     .setDescription('Xem top donate'),
 
+  // LỊCH SỬ DONATE
+  new SlashCommandBuilder()
+    .setName('lichsudonate')
+    .setDescription('Xem lịch sử donate'),
+
+  // SỬA DONATE
+  new SlashCommandBuilder()
+    .setName('suadonate')
+    .setDescription('Sửa 1 lần donate theo ID')
+    .addIntegerOption(option =>
+      option.setName('id')
+        .setDescription('ID donate')
+        .setRequired(true)
+    )
+    .addIntegerOption(option =>
+      option.setName('money')
+        .setDescription('Số tiền mới')
+        .setRequired(true)
+    ),
+
+  // XÓA DONATE
+  new SlashCommandBuilder()
+    .setName('xoadonate')
+    .setDescription('Xóa 1 lần donate')
+    .addIntegerOption(option =>
+      option.setName('id')
+        .setDescription('ID donate')
+        .setRequired(true)
+    ),
+
   // TRỪ QUỸ
   new SlashCommandBuilder()
     .setName('truquy')
@@ -60,31 +103,21 @@ const commands = [
         .setRequired(true)
     ),
 
-  // SỬA DONATE
-  new SlashCommandBuilder()
-    .setName('suadonate')
-    .setDescription('Sửa số tiền donate của người chơi')
-    .addStringOption(option =>
-      option.setName('nguoigui')
-        .setDescription('Tên người donate')
-        .setRequired(true)
-    )
-    .addIntegerOption(option =>
-      option.setName('money')
-        .setDescription('Số tiền mới')
-        .setRequired(true)
-    ),
-
   // RESET QUỸ
   new SlashCommandBuilder()
     .setName('resetquy')
-    .setDescription('Reset toàn bộ quỹ và donate'),
+    .setDescription('Reset toàn bộ quỹ'),
 
 ].map(command => command.toJSON());
+
+// ======================
+// LOAD COMMANDS
+// ======================
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
 
 (async () => {
+
   try {
 
     console.log('Loading slash commands...');
@@ -100,39 +133,57 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
     console.log('Slash commands loaded.');
 
   } catch (error) {
+
     console.log(error);
+
   }
+
 })();
+
+// ======================
+// READY
+// ======================
 
 client.once('ready', () => {
   console.log(`Logged in as ${client.user.tag}`);
 });
 
+// ======================
+// INTERACTION
+// ======================
+
 client.on('interactionCreate', async interaction => {
 
   if (!interaction.isChatInputCommand()) return;
 
+  // ======================
   // DONATE
+  // ======================
+
   if (interaction.commandName === 'donate') {
 
     const senderName = interaction.options.getString('nguoigui');
     const money = interaction.options.getInteger('money');
 
+    const donateData = {
+      id: donationId,
+      name: senderName,
+      money: money
+    };
+
+    donations.push(donateData);
+
     totalMoney += money;
 
-    if (!donors[senderName]) {
-      donors[senderName] = 0;
-    }
-
-    donors[senderName] += money;
+    donationId++;
 
     const embed = new EmbedBuilder()
       .setTitle('💰 Donate Thành Công')
       .setDescription(
-        `👤 Người gửi: **${senderName}**\n` +
+        `🆔 ID Donate: ${donateData.id}\n` +
+        `👤 Người gửi: ${senderName}\n` +
         `💵 Số tiền: ${money.toLocaleString()}đ\n\n` +
-        `🏦 Tổng quỹ hiện tại: ${totalMoney.toLocaleString()}đ\n\n` +
-        `❤️ Cảm ơn bạn đã đóng góp!`
+        `🏦 Tổng quỹ hiện tại: ${totalMoney.toLocaleString()}đ`
       );
 
     await interaction.reply({
@@ -140,7 +191,10 @@ client.on('interactionCreate', async interaction => {
     });
   }
 
+  // ======================
   // QUỸ
+  // ======================
+
   if (interaction.commandName === 'quy') {
 
     const embed = new EmbedBuilder()
@@ -154,10 +208,25 @@ client.on('interactionCreate', async interaction => {
     });
   }
 
+  // ======================
   // TOP DONATE
+  // ======================
+
   if (interaction.commandName === 'topdonate') {
 
-    const sorted = Object.entries(donors)
+    const totals = {};
+
+    donations.forEach(d => {
+
+      if (!totals[d.name]) {
+        totals[d.name] = 0;
+      }
+
+      totals[d.name] += d.money;
+
+    });
+
+    const sorted = Object.entries(totals)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10);
 
@@ -178,7 +247,114 @@ client.on('interactionCreate', async interaction => {
     });
   }
 
+  // ======================
+  // LỊCH SỬ DONATE
+  // ======================
+
+  if (interaction.commandName === 'lichsudonate') {
+
+    let text = '';
+
+    donations.slice(-10).reverse().forEach(d => {
+
+      text +=
+        `🆔 ${d.id} | ${d.name} | ${d.money.toLocaleString()}đ\n`;
+
+    });
+
+    const embed = new EmbedBuilder()
+      .setTitle('📜 Lịch Sử Donate')
+      .setDescription(
+        text || 'Chưa có donate'
+      );
+
+    await interaction.reply({
+      embeds: [embed]
+    });
+  }
+
+  // ======================
+  // SỬA DONATE
+  // ======================
+
+  if (interaction.commandName === 'suadonate') {
+
+    const id = interaction.options.getInteger('id');
+    const newMoney = interaction.options.getInteger('money');
+
+    const donate = donations.find(d => d.id === id);
+
+    if (!donate) {
+
+      return interaction.reply({
+        content: '❌ Không tìm thấy ID donate',
+        ephemeral: true
+      });
+
+    }
+
+    const oldMoney = donate.money;
+
+    donate.money = newMoney;
+
+    totalMoney = totalMoney - oldMoney + newMoney;
+
+    const embed = new EmbedBuilder()
+      .setTitle('✏️ Đã Sửa Donate')
+      .setDescription(
+        `🆔 ID: ${id}\n` +
+        `👤 Người donate: ${donate.name}\n` +
+        `💵 Tiền cũ: ${oldMoney.toLocaleString()}đ\n` +
+        `💰 Tiền mới: ${newMoney.toLocaleString()}đ\n\n` +
+        `🏦 Tổng quỹ hiện tại: ${totalMoney.toLocaleString()}đ`
+      );
+
+    await interaction.reply({
+      embeds: [embed]
+    });
+  }
+
+  // ======================
+  // XÓA DONATE
+  // ======================
+
+  if (interaction.commandName === 'xoadonate') {
+
+    const id = interaction.options.getInteger('id');
+
+    const donate = donations.find(d => d.id === id);
+
+    if (!donate) {
+
+      return interaction.reply({
+        content: '❌ Không tìm thấy ID donate',
+        ephemeral: true
+      });
+
+    }
+
+    totalMoney -= donate.money;
+
+    donations = donations.filter(d => d.id !== id);
+
+    const embed = new EmbedBuilder()
+      .setTitle('🗑️ Đã Xóa Donate')
+      .setDescription(
+        `🆔 ID: ${id}\n` +
+        `👤 Người donate: ${donate.name}\n` +
+        `💵 Số tiền đã xóa: ${donate.money.toLocaleString()}đ\n\n` +
+        `🏦 Tổng quỹ hiện tại: ${totalMoney.toLocaleString()}đ`
+      );
+
+    await interaction.reply({
+      embeds: [embed]
+    });
+  }
+
+  // ======================
   // TRỪ QUỸ
+  // ======================
+
   if (interaction.commandName === 'truquy') {
 
     const money = interaction.options.getInteger('money');
@@ -209,43 +385,21 @@ client.on('interactionCreate', async interaction => {
     });
   }
 
-  // SỬA DONATE
-  if (interaction.commandName === 'suadonate') {
-
-    const senderName = interaction.options.getString('nguoigui');
-    const newMoney = interaction.options.getInteger('money');
-
-    const oldMoney = donors[senderName] || 0;
-
-    totalMoney = totalMoney - oldMoney + newMoney;
-
-    donors[senderName] = newMoney;
-
-    const embed = new EmbedBuilder()
-      .setTitle('✏️ Đã Sửa Donate')
-      .setDescription(
-        `👤 Người donate: **${senderName}**\n` +
-        `💵 Tiền cũ: ${oldMoney.toLocaleString()}đ\n` +
-        `💰 Tiền mới: ${newMoney.toLocaleString()}đ\n\n` +
-        `🏦 Tổng quỹ hiện tại: ${totalMoney.toLocaleString()}đ`
-      );
-
-    await interaction.reply({
-      embeds: [embed]
-    });
-  }
-
+  // ======================
   // RESET QUỸ
+  // ======================
+
   if (interaction.commandName === 'resetquy') {
 
     totalMoney = 0;
-    donors = {};
+    donations = [];
+    donationId = 1;
 
     const embed = new EmbedBuilder()
       .setTitle('🗑️ Reset Quỹ Thành Công')
       .setDescription(
         `💸 Tổng quỹ đã về 0đ\n` +
-        `📉 Bảng xếp hạng donate đã được xóa`
+        `📉 Toàn bộ lịch sử donate đã bị xóa`
       );
 
     await interaction.reply({
@@ -254,5 +408,9 @@ client.on('interactionCreate', async interaction => {
   }
 
 });
+
+// ======================
+// LOGIN
+// ======================
 
 client.login(TOKEN);
