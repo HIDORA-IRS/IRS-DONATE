@@ -103,7 +103,7 @@ client.on('interactionCreate', async interaction => {
       .setDescription(
         `👤 Người donate: ${interaction.user}\n` +
         `💵 Số tiền: ${money.toLocaleString()}đ\n\n` +
-        `🏦 Tổng quỹ hiện tại:\n${totalMoney.toLocaleString()}đ`
+        `🏦 Tổng quỹ hiện tại: ${totalMoney.toLocaleString()}đ`
       );
 
     await interaction.reply({
@@ -117,7 +117,7 @@ client.on('interactionCreate', async interaction => {
     const embed = new EmbedBuilder()
       .setTitle('🏦 Quỹ Clan')
       .setDescription(
-        `💰 Tổng quỹ hiện tại:\n${totalMoney.toLocaleString()}đ`
+        `💰 Tổng quỹ hiện tại: ${totalMoney.toLocaleString()}đ`
       );
 
     await interaction.reply({
@@ -167,7 +167,7 @@ client.on('interactionCreate', async interaction => {
         `👤 Người sử dụng: ${interaction.user}\n` +
         `💵 Số tiền: ${money.toLocaleString()}đ\n` +
         `📝 Lý do: ${reason}\n\n` +
-        `🏦 Quỹ còn lại:\n${totalMoney.toLocaleString()}đ`
+        `🏦 Quỹ còn lại: ${totalMoney.toLocaleString()}đ`
       );
 
     await interaction.reply({
