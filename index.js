@@ -20,23 +20,32 @@ let donors = {};
 
 const commands = [
 
+  // DONATE
   new SlashCommandBuilder()
     .setName('donate')
     .setDescription('Donate vào quỹ')
+    .addStringOption(option =>
+      option.setName('nguoigui')
+        .setDescription('Tên người donate')
+        .setRequired(true)
+    )
     .addIntegerOption(option =>
       option.setName('money')
         .setDescription('Số tiền donate')
         .setRequired(true)
     ),
 
+  // QUỸ
   new SlashCommandBuilder()
     .setName('quy')
     .setDescription('Xem tổng quỹ'),
 
+  // TOP DONATE
   new SlashCommandBuilder()
     .setName('topdonate')
     .setDescription('Xem top donate'),
 
+  // TRỪ QUỸ
   new SlashCommandBuilder()
     .setName('truquy')
     .setDescription('Trừ tiền khỏi quỹ')
@@ -86,24 +95,25 @@ client.on('interactionCreate', async interaction => {
   // DONATE
   if (interaction.commandName === 'donate') {
 
+    const senderName = interaction.options.getString('nguoigui');
     const money = interaction.options.getInteger('money');
 
     totalMoney += money;
 
-    const userId = interaction.user.id;
-
-    if (!donors[userId]) {
-      donors[userId] = 0;
+    if (!donors[senderName]) {
+      donors[senderName] = 0;
     }
 
-    donors[userId] += money;
+    donors[senderName] += money;
 
     const embed = new EmbedBuilder()
       .setTitle('💰 Donate Thành Công')
       .setDescription(
-        `👤 Người donate: ${interaction.user}\n` +
+        `👤 Người gửi: **${senderName}**\n` +
         `💵 Số tiền: ${money.toLocaleString()}đ\n\n` +
-        `🏦 Tổng quỹ hiện tại: ${totalMoney.toLocaleString()}đ`
+        `🏦 Tổng quỹ hiện tại: ${totalMoney.toLocaleString()}đ\n\n` +
+        `❤️ Cảm ơn bạn đã đóng góp!\n` +
+        `Chúc bạn ngày tốt lành ❤️`
       );
 
     await interaction.reply({
@@ -135,7 +145,7 @@ client.on('interactionCreate', async interaction => {
     let text = '';
 
     sorted.forEach((d, i) => {
-      text += `${i + 1}. <@${d[0]}> — ${d[1].toLocaleString()}đ\n`;
+      text += `${i + 1}. ${d[0]} — ${d[1].toLocaleString()}đ\n`;
     });
 
     const embed = new EmbedBuilder()
